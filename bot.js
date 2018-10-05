@@ -29,7 +29,7 @@ bot.on('new_chat_members', (ctx) => {
     })
 });
 
-// print the erros
+// print the errors
 bot.on('polling_error', (error) => {
     console.log(error)
 });
