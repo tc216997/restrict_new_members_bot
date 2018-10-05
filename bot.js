@@ -1,6 +1,7 @@
-require('dotenv').config();
+const configs = require('./configs.js');
 const TelegramBot = require('node-telegram-bot-api');
-const token = process.env.apikey;
+const token = configs.token
+
 const bot = new TelegramBot(token, {polling: true});
 
 // on new members event

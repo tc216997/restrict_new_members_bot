@@ -1,0 +1,5 @@
+let configs = {
+  token: 'api_token_from_botfather',
+}
+
+module.exports = configs;
