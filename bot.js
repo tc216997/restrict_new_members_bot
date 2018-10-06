@@ -33,7 +33,7 @@ bot.on('new_chat_members', (ctx) => {
     })
 });
 
-// bot 1
+// bot
 bot.on('message', msg => {
     //console.log(msg)
     //console.log(whitelist.includes(msg.from.username))
@@ -47,6 +47,7 @@ bot.on('message', msg => {
         bot.sendMessage(channel, fact);
       }, factsTimer);
     }
+
     if (msg.text === 'stop random facts' && whitelist.includes(msg.from.username)) {
       console.log('Facts stopped')
       clearInterval(factsIntervalId);

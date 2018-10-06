@@ -1,6 +1,9 @@
 let configs = {
+  // bot api token
   token: 'api token',
+  // username to be whitelisted for bot commands
   whitelist: ['username 1', 'username 2'],
+  // random facts that you want to bot to pull from
   facts: ['a for apple',
           'b for boy',
           'c for cat',
@@ -17,6 +20,7 @@ let configs = {
           'o for oprah',
           'p for paul'
   ],
+  // timer setting for facts interval. enter in minutes you want
   factsTimer: 1,
 }
 
