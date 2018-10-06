@@ -1,5 +1,24 @@
 let configs = {
-  token: 'api_token_from_botfather',
+  token: 'api token',
+  whitelist: ['username 1', 'username 2'],
+  facts: ['a for apple',
+          'b for boy',
+          'c for cat',
+          'd for dog',
+          'e for elephant',
+          'f for frank',
+          'g for girl',
+          'h for harry',
+          'i for india',
+          'k for karen',
+          'l for larry',
+          'm for moe',
+          'n for nancy',
+          'o for oprah',
+          'p for paul'
+  ],
+  factsTimer: 1,
 }
+
 
 module.exports = configs;
