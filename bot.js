@@ -4,7 +4,7 @@ const token = configs.token
 const bot = new TelegramBot(token, {polling: true});
 const whitelist = configs.whitelist
 const facts = configs.facts
-const factsTimer = configs.factsTimer * 1000 * 10
+const factsTimer = configs.factsTimer * 1000 * 60
 let factsIntervalId;
 
 // on new members event
