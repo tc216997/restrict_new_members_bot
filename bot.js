@@ -88,7 +88,7 @@ randomFactsBot.on('message', msg => {
         //should generate random interval
         factsIntervalId = setInterval(() => {
             // get a randomFact and send the fact to chat
-            bot.sendMessage(msg.chat.id, facts[Math.floor(Math.random()*facts.length)]);
+            randomFactsBot.sendMessage(msg.chat.id, facts[Math.floor(Math.random()*facts.length)]);
         }, randomFactsTimer);
         randomFactsBot.sendMessage(msg.chat.id, `Turning random facts on.`); 
     }

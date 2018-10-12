@@ -1,28 +1,80 @@
 let configs = {
-  // bot api token
-  token: 'api token',
-  // username to be whitelisted for bot commands
-  whitelist: ['username 1', 'username 2'],
-  // random facts that you want to bot to pull from
-  facts: ['a for apple',
-          'b for boy',
-          'c for cat',
-          'd for dog',
-          'e for elephant',
-          'f for frank',
-          'g for girl',
-          'h for harry',
-          'i for india',
-          'k for karen',
-          'l for larry',
-          'm for moe',
-          'n for nancy',
-          'o for oprah',
-          'p for paul'
+  restrictionToken: 'token',
+  randomFactsToken: 'token',
+  quizToken: 'token',
+  whitelist: ['username1', 'username2'],
+  randomFactsMode: false,
+  randomFactsTimer: 60,
+  restrictionTimer: 10,
+  restrictionMode: false,
+  quizMode: false,
+  quizTimer: 60,
+  facts: [
+    'a for apple',
+    'b for boy',
+    'c for cat',
+    'd for dog',
+    'e for elephant',
+    'f for frank',
+    'g for girl',
+    'h for harry',
+    'i for india',
+    'k for karen',
+    'l for larry',
+    'm for moe',
+    'n for nancy',
+    'o for oprah',
+    'p for paul'
   ],
-  // timer setting for facts interval. enter in minutes you want
-  factsTimer: 1,
+  questions: [
+    'Grand Central Terminal, Park Avenue, New York is the world\'s\
+    \n  A.  largest railway station\
+    \n  B.  highest railway station\
+    \n  C.	longest railway station\
+    \n  D.	None of the above',
+    'Entomology is the science that studies\
+    \n  A.	Behavior of human beings\
+    \n  B.	Insects\
+    \n  C.	The origin and history of technical and scientific terms\
+    \n  D.	The formation of rocks', 
+    'Eritrea, which became the 182nd member of the UN in 1993, is in the continent of\
+    \n  A.	Asia\
+    \n  B.	Africa\
+    \n  C.	Europe\
+    \n  D.	Australia',
+    'Garampani sanctuary is located at\
+    \n  A.	Junagarh, Gujarat\
+    \n  B.	Diphu, Assam\
+    \n  C.	Kohima, Nagaland\
+    \n  D.	Gangtok, Sikkim',
+    'For which of the following disciplines is Nobel Prize awarded?\
+    \n  A.	Physics and Chemistry\
+    \n  B.	Physiology or Medicine\
+    \n  C.	Literature, Peace and Economics\
+    \n  D.	All of the above',
+    'Hitler party which came into power in 1933 is known as\
+    \n  A.	Labour Party\
+    \n  B.	Nazi Party\
+    \n  C.	Ku-Klux-Klan\
+    \n  D.	Democratic Party',
+    'FFC stands for\
+    \n  A.	Foreign Finance Corporation\
+    \n  B.	Film Finance Corporation\
+    \n  C.	Federation of Football Council\
+    \n  D.	None of the above',
+    'Fastest shorthand writer was\
+    \n  A.	Dr. G. D. Bist\
+    \n  B.	J.R.D. Tata\
+    \n  C.	J.M. Tagore\
+    \n  D.	Khudada Khan',
+    'Epsom (England) is the place associated with\
+    \n  A.	Horse racing\
+    \n  B.	Polo\
+    \n  C.	Shooting\
+    \n  D.	Snooker',
+    
+    'First human heart transplant operation conducted by Dr. Christiaan Barnard on Louis Washkansky, was conducted in\n  A.	1967\\n  B.	1968\n  C.	1958\n  D.	1922',
+  ],  
 }
-
 
 module.exports = configs;
