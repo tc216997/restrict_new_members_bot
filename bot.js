@@ -91,7 +91,7 @@ restrictionBot.on('message', msg => {
         // push the blacklisted word into a array
         filtered.push(wordsToBlacklist);
         // show the chatroom the words that are blacklisted
-        restrictionBot.sendMessage(msg.chat.id, `"${wordsToBlacklist}" added.`);
+        restrictionBot.sendMessage(msg.chat.id, `"${wordsToBlacklist}" added to the list.`);
     } 
 
     // remove words to filter list
@@ -100,14 +100,18 @@ restrictionBot.on('message', msg => {
         let wordsToRemove = message.split(' ').slice(1, message.length).join(' ');
         // find the index of the word in list
         let indexToRemove = filtered.indexOf(wordsToRemove);
-        // remove it from array
-        filtered.splice(indexToRemove, 1);        
-        // show the remaining words in the filtered list
-        restrictionBot.sendMessage(msg.chat.id, `"${wordsToRemove}" removed.`);
+        if (indexToRemove > -1) {
+            // remove it from array
+            filtered.splice(indexToRemove, 1);        
+            // show the remaining words in the filtered list
+            restrictionBot.sendMessage(msg.chat.id, `"${wordsToRemove}" removed from the list.`);
+        } else {
+            restrictionBot.sendMessage(msg.chat.id, `"${wordsToRemove}" isn't in the list.`);
+        }
     }
 
     // show current blacklisted words
-    if (message.includes('!showblacklist') && whitelist.includes(msg.from.username)) {
+    if (message === '!showblacklist' && whitelist.includes(msg.from.username)) {
         let wordlist = filtered.map((word, index) => {return `\t${index+1}.) "${word}"\n`}).join(' ')
         restrictionBot.sendMessage(msg.chat.id, `Current list:\n\t${(wordlist) !== false ? wordlist:'None.'}`);
     }
@@ -116,8 +120,9 @@ restrictionBot.on('message', msg => {
     // it also remove non alphanumeric characters from test case
     if ( (filtered.includes(message.toLowerCase()) || filtered.includes(message.toLowerCase().replace(/[^\w\s]/gi, ''))) && !whitelist.includes(msg.from.username)) {
         restrictionBot.deleteMessage(msg.chat.id, msg.message_id);
-        restrictionBot.sendMessage(msg.chat.id, `(Message id: ${msg.message_id}, "${msg.text}") from ${msg.from.username} were deleted.`);
+        restrictionBot.sendMessage(-1001323429701, `(Message id: ${msg.message_id}, "${msg.text}") from ${msg.from.username} were deleted.`);
     }
+
 });
 
 // random facts bot
