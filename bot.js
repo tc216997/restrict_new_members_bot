@@ -3,7 +3,6 @@ const TelegramBot = require('node-telegram-bot-api');
 const restrictionBot = new TelegramBot(configs.restrictionToken, {polling: true});
 const randomFactsBot = new TelegramBot(configs.randomFactsToken, {polling: true});
 const quizBot = new TelegramBot(configs.quizToken, {polling: true});
-const whitelist = configs.whitelist;
 const facts = configs.facts;
 const quiz = configs.questions;
 let filtered = configs.filteredWords;
@@ -16,7 +15,31 @@ let quizMode = configs.quizMode;
 let quizTimer = configs.quizTimer * 1000 * 60;
 let questionNumber = 1;
 let usedQuestions = [];
+let whitelist = configs.whitelist;
 let factsIntervalId, quizIntervalId;
+let mainChatId = -1001323429701;
+let commands = ['!showCommands',
+    '!startRestriction', 
+    '!stopRestriction', 
+    '!showRestrictionTimer', 
+    '!setRestrictionTimer minutes',
+    '!startFilter', 
+    '!stopFilter',
+    '!showConfigs',
+    '!addWords wordToAddToFilter',
+    '!removeWords wordToRemoveFromFilter',
+    '!showFilter',
+    '!whitelist',
+    '!addUser usernameToBeAdd',
+    '!removeUser usernameToBeRemoved',
+    '!startFacts',
+    '!stopFacts',
+    '!factsTimer',
+    '!setFactsTimer minutes',
+    '!startQuiz',
+    '!stopQuiz',
+    '!quizTimer',
+    '!setQuizTimer minutes' ]
 
 // on new members event
 restrictionBot.on('new_chat_members', (msg) => {
@@ -44,58 +67,71 @@ restrictionBot.on('new_chat_members', (msg) => {
 // restriction bot
 restrictionBot.on('message', msg => {
     let message = [];
-
+    let beginsWith = '';
     if (msg.hasOwnProperty('text')) {
         message = msg.text
+        beginsWith = message.split(' ')[0]
+    }
+
+    // show current list of commands
+    if (message === '!showCommands' && whitelist.includes(msg.from.username)) {
+        let wordlist = commands.map((word, index) => {return `\t${index+1}.) "${word}"\n`}).join(' ')
+        restrictionBot.sendMessage(mainChatId, `Current commands:\n\t${wordlist}`);
     }
 
     // turn quiz mode on
-    if (msg.text === 'start restriction mode' && whitelist.includes(msg.from.username) && !restrictionMode) {
-        restrictionBot.sendMessage(msg.chat.id, `Restriction mode: On. Timer:${restrictionTimer} ${(restrictionTimer === 1) ? 'minute':'minutes'}`); 
+    if (message === '!startRestriction' && whitelist.includes(msg.from.username) && !restrictionMode) {
+        restrictionBot.sendMessage(mainChatId, `Restriction: On. Timer:${restrictionTimer} ${(restrictionTimer === 1) ? 'minute':'minutes'}`); 
         restrictionMode = true;
     }
     // turn quiz mode off
-    if (msg.text === 'stop restriction mode' && whitelist.includes(msg.from.username) && restrictionMode) {
-        restrictionBot.sendMessage(msg.chat.id, `Restriction mode: off.`); 
+    if (message === '!stopRestriction' && whitelist.includes(msg.from.username) && restrictionMode) {
+        restrictionBot.sendMessage(mainChatId, `Restriction: off.`); 
         restrictionMode = false;
     }
     // check current restriction timer
-    if (message.includes('current restriction timer') && whitelist.includes(msg.from.username)) {
-        restrictionBot.sendMessage(msg.chat.id, `${restrictionTimer} ${(restrictionTimer === 1) ? 'minute':'minutes'}.`)
+    if (message === '!showRestrictionTimer' && whitelist.includes(msg.from.username)) {
+        restrictionBot.sendMessage(mainChatId, `${restrictionTimer} ${(restrictionTimer === 1) ? 'minute':'minutes'}.`)
     }
     // change restriction timer
-    if (message.includes('set restriction timer to') && whitelist.includes(msg.from.username)) {
+    if (beginsWith === '!setRestrictionTimer' && whitelist.includes(msg.from.username)) {
         // get only number from string
         let newTimeLimit = Math.round(parseFloat(message.split(' ').pop()));
         if (newTimeLimit) {
             restrictionTimer = newTimeLimit
-            restrictionBot.sendMessage(msg.chat.id, `Restriction timer is now set to ${restrictionTimer} ${(restrictionTimer === 1) ? 'minute':'minutes'}.`);    
+            restrictionBot.sendMessage(mainChatId, `Restriction timer is now set to ${restrictionTimer} ${(restrictionTimer === 1) ? 'minute':'minutes'}.`);    
         }
     } 
 
     // turn message filtering on
-    if (message.includes('start filtering mode') && whitelist.includes(msg.from.username)) {
-        restrictionBot.sendMessage(msg.chat.id, `Message filtering mode: on.`);
+    if (message === '!startFilter' && whitelist.includes(msg.from.username) && !filterMode) {
+        restrictionBot.sendMessage(mainChatId, `Message filtering: on.`);
         filterMode = true;
     }     
 
     // turn message filtering off
-    if (msg.text === 'stop filtering mode' && whitelist.includes(msg.from.username) && filterMode) {
-        restrictionBot.sendMessage(msg.chat.id, `Message filtering mode: off.`); 
+    if (message === '!stopFilter' && whitelist.includes(msg.from.username) && filterMode) {
+        restrictionBot.sendMessage(mainChatId, `Message filtering: off.`); 
+        filterMode = false;
+    }
+
+    // show the configs
+    if (message === '!showConfigs' && whitelist.includes(msg.from.username)) {
+        restrictionBot.sendMessage(mainChatId, `\tRestriction Mode: ${restrictionMode}\t\nMessage filtering mode: ${filterMode}\t\nQuiz Mode: ${quizMode}\t\nRandom Facts Mode: ${randomFactsMode}`); 
         filterMode = false;
     }
 
     // add words to filter list
-    if (message.includes('!add') && whitelist.includes(msg.from.username)) {
+    if (beginsWith === '!addWords' && whitelist.includes(msg.from.username)) {
         let wordsToBlacklist = message.split(' ').slice(1, message.length).join(' ');
         // push the blacklisted word into a array
         filtered.push(wordsToBlacklist);
         // show the chatroom the words that are blacklisted
-        restrictionBot.sendMessage(msg.chat.id, `"${wordsToBlacklist}" added to the list.`);
-    } 
+        restrictionBot.sendMessage(mainChatId, `"${wordsToBlacklist}" added to the list.`);
+    }
 
     // remove words to filter list
-    if (message.includes('!remove') && whitelist.includes(msg.from.username)) {
+    if (beginsWith === '!removeWords' && whitelist.includes(msg.from.username)) {
         // get the words to remove
         let wordsToRemove = message.split(' ').slice(1, message.length).join(' ');
         // find the index of the word in list
@@ -104,25 +140,57 @@ restrictionBot.on('message', msg => {
             // remove it from array
             filtered.splice(indexToRemove, 1);        
             // show the remaining words in the filtered list
-            restrictionBot.sendMessage(msg.chat.id, `"${wordsToRemove}" removed from the list.`);
+            restrictionBot.sendMessage(mainChatId, `"${wordsToRemove}" removed from the list.`);
         } else {
-            restrictionBot.sendMessage(msg.chat.id, `"${wordsToRemove}" isn't in the list.`);
+            restrictionBot.sendMessage(mainChatId, `"${wordsToRemove}" isn't in the list.`);
         }
     }
 
     // show current blacklisted words
-    if (message === '!showblacklist' && whitelist.includes(msg.from.username)) {
+    if (message === '!showFilter' && whitelist.includes(msg.from.username)) {
         let wordlist = filtered.map((word, index) => {return `\t${index+1}.) "${word}"\n`}).join(' ')
-        restrictionBot.sendMessage(msg.chat.id, `Current list:\n\t${(wordlist) !== false ? wordlist:'None.'}`);
+        restrictionBot.sendMessage(mainChatId, `Current list:\n\t${(wordlist) !== false ? wordlist:'None.'}`);
     }
+
+
     // if filter mode is on, check the message to see if it is in the filter list, if it is, delete the message
     // to remove the message, you need the chat_id and the message_id
     // it also remove non alphanumeric characters from test case
-    if ( (filtered.includes(message.toLowerCase()) || filtered.includes(message.toLowerCase().replace(/[^\w\s]/gi, ''))) && !whitelist.includes(msg.from.username)) {
+    if ( (filtered.includes(message.toLowerCase()) || filtered.includes(message.toLowerCase().replace(/[^\w\s]/gi, ''))) && !whitelist.includes(msg.from.username) && filterMode) {
         restrictionBot.deleteMessage(msg.chat.id, msg.message_id);
-        restrictionBot.sendMessage(-1001323429701, `(Message id: ${msg.message_id}, "${msg.text}") from ${msg.from.username} were deleted.`);
+        restrictionBot.sendMessage(mainChatId, `(Message id: ${msg.message_id}, "${msg.text}") from ${msg.from.username} were deleted.`);
     }
 
+    // show whitelisted usernames
+    if (message === '!whitelist' && whitelist.includes(msg.from.username)) {
+        let wordlist = whitelist.map((word, index) => {return `\t${index+1}.) "${word}"\n`}).join(' ')
+        restrictionBot.sendMessage(mainChatId, `Whitelisted usernames:\n\t${(wordlist) !== false ? wordlist:'None.'}`);
+    }
+
+    // add whitelisted usernames
+    if (beginsWith === '!addUser' && whitelist.includes(msg.from.username)) {
+        let whitelistName = message.split(' ').slice(1, message.length).join(' ');
+        // push the blacklisted word into a array
+        whitelist.push(whitelistName);
+        // show the chatroom the words that are blacklisted
+        restrictionBot.sendMessage(mainChatId, `"${whitelistName}" added to whitelist.`);
+    }
+
+    // remove whitelisted usernames
+    if (beginsWith === '!removeUser' && whitelist.includes(msg.from.username)) {
+        // get the words to remove
+        let wordsToRemove = message.split(' ').slice(1, message.length).join(' ');
+        // find the index of the word in list
+        let indexToRemove = whitelist.indexOf(wordsToRemove);
+        if (indexToRemove > -1) {
+            // remove it from array
+            whitelist.splice(indexToRemove, 1);        
+            // show the remaining words in the filtered list
+            restrictionBot.sendMessage(mainChatId, `"${wordsToRemove}" removed from the list.`);
+        } else {
+            restrictionBot.sendMessage(mainChatId, `"${wordsToRemove}" isn't in the list.`);
+        }
+    }
 });
 
 // random facts bot
@@ -131,10 +199,11 @@ randomFactsBot.on('message', msg => {
 
     if (msg.hasOwnProperty('text')) {
         message = msg.text
+        beginsWith = message.split(' ')[0]
     }
 
     // turn on random facts if the loop was off
-    if (msg.text === 'start random facts' && whitelist.includes(msg.from.username) && !randomFactsMode) {
+    if (message === '!startFacts' && whitelist.includes(msg.from.username) && !randomFactsMode) {
         
         // flip randomFactsMode to true
         randomFactsMode = true;
@@ -145,28 +214,28 @@ randomFactsBot.on('message', msg => {
             // change this to send message or picture in the future
             randomFactsBot.sendMessage(msg.chat.id, facts[Math.floor(Math.random()*facts.length)]);
         }, randomFactsTimer);
-        randomFactsBot.sendMessage(msg.chat.id, `Turning random facts on.`); 
+        randomFactsBot.sendMessage(mainChatId, `Turning random facts on.`); 
     }
 
     // turn off random facts
-    if (msg.text === 'stop random facts' && whitelist.includes(msg.from.username) && randomFactsMode) {
+    if (message === '!stopFacts' && whitelist.includes(msg.from.username) && randomFactsMode) {
         
         // clear interval
         clearInterval(factsIntervalId);
         // flip randomFactsMode to false
         randomFactsMode = false
-        randomFactsBot.sendMessage(msg.chat.id, `Turning random facts off.`); 
+        randomFactsBot.sendMessage(mainChatId, `Turning random facts off.`); 
     }
 
 
     // check current random facts timer
-    if (message.includes('current random facts timer') && whitelist.includes(msg.from.username)) {
-        randomFactsBot.sendMessage(msg.chat.id, `${randomFactsTimer/60/1000} ${((randomFactsTimer/60/1000) === 1) ? 'minute':'minutes'}.`)
+    if (message === '!factsTimer' && whitelist.includes(msg.from.username)) {
+        randomFactsBot.sendMessage(mainChatId, `${randomFactsTimer/60/1000} ${((randomFactsTimer/60/1000) === 1) ? 'minute':'minutes'}.`)
     }
 
 
     // change random facts timer
-    if (message.includes('set random facts timer to') && whitelist.includes(msg.from.username)) {
+    if (beginsWith === '!setFactsTimer' && whitelist.includes(msg.from.username)) {
         // get only number from string
         let newTimeLimit = Math.round(parseFloat(message.split(' ').pop()));
         if (newTimeLimit) {
@@ -184,7 +253,7 @@ randomFactsBot.on('message', msg => {
                 }, randomFactsTimer); 
             }           
             
-            randomFactsBot.sendMessage(msg.chat.id, `Random facts timer is now set to ${randomFactsTimer/60/1000} ${((randomFactsTimer/60/1000) === 1) ? 'minute':'minutes'}.`);    
+            randomFactsBot.sendMessage(mainChatId, `Random facts timer is now set to ${randomFactsTimer/60/1000} ${((randomFactsTimer/60/1000) === 1) ? 'minute':'minutes'}.`);    
         }
     }
 
@@ -196,10 +265,11 @@ quizBot.on('message', msg => {
 
     if (msg.hasOwnProperty('text')) {
         message = msg.text
+        beginsWith = message.split(' ')[0]
     }
 
     // turn on quiz if the loop was off
-    if (msg.text === 'start pop quiz' && whitelist.includes(msg.from.username) && !quizMode) {
+    if (message === '!startQuiz' && whitelist.includes(msg.from.username) && !quizMode) {
         
         // flip quizMode to true
         quizMode = true;
@@ -247,7 +317,7 @@ quizBot.on('message', msg => {
     }
 
     // turn off quiz
-    if (msg.text === 'stop pop quiz' && whitelist.includes(msg.from.username) && quizMode) {
+    if (message === '!stopQuiz' && whitelist.includes(msg.from.username) && quizMode) {
         
         // clear interval
         clearInterval(quizIntervalId);
@@ -258,19 +328,19 @@ quizBot.on('message', msg => {
 
 
     // check current quiz timer
-    if (message.includes('current quiz timer') && whitelist.includes(msg.from.username)) {
-        quizBot.sendMessage(msg.chat.id, `${quizTimer/60/1000} ${((quizTimer/60/1000) === 1) ? 'minute':'minutes'}.`)
+    if (message === '!quizTimer' && whitelist.includes(msg.from.username)) {
+        quizBot.sendMessage(mainChatId, `${quizTimer/60/1000} ${((quizTimer/60/1000) === 1) ? 'minute':'minutes'}.`)
     }
 
 
     // change quiz timer, only allows quiz timer to be changed when the quiz is off
-    if (message.includes('set quiz timer to') && whitelist.includes(msg.from.username) && !quizMode) {
+    if (beginsWith === '!setQuizTimer' && whitelist.includes(msg.from.username) && !quizMode) {
         // get only number from string
         let quizTimeLimit = Math.round(parseFloat(message.split(' ').pop()));
 
         if (quizTimeLimit) {
             quizTimer = quizTimeLimit*1000*60;
-            quizBot.sendMessage(msg.chat.id, `Quiz timer is now changed to ${quizTimer/60/1000} ${((quizTimer/60/1000) === 1) ? 'minute':'minutes'}.`);    
+            quizBot.sendMessage(mainChatId, `Quiz timer is now changed to ${quizTimer/60/1000} ${((quizTimer/60/1000) === 1) ? 'minute':'minutes'}.`);    
         }
     }
 
