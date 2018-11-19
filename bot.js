@@ -6,13 +6,16 @@ const quizBot = new TelegramBot(configs.quizToken, {polling: true});
 const whitelist = configs.whitelist;
 const facts = configs.facts;
 const quiz = configs.questions;
+let filtered = configs.filteredWords;
 let randomFactsTimer = configs.randomFactsTimer * 1000 * 60;
 let restrictionTimer = configs.restrictionTimer;
 let restrictionMode = configs.restrictionMode;
+let filterMode = configs.filterMode;
 let randomFactsMode = configs.randomFactsMode;
 let quizMode = configs.quizMode;
 let quizTimer = configs.quizTimer * 1000 * 60;
 let questionNumber = 1;
+let usedQuestions = [];
 let factsIntervalId, quizIntervalId;
 
 // on new members event
@@ -68,7 +71,53 @@ restrictionBot.on('message', msg => {
             restrictionTimer = newTimeLimit
             restrictionBot.sendMessage(msg.chat.id, `Restriction timer is now set to ${restrictionTimer} ${(restrictionTimer === 1) ? 'minute':'minutes'}.`);    
         }
-    }    
+    } 
+
+    // turn message filtering on
+    if (message.includes('start filtering mode') && whitelist.includes(msg.from.username)) {
+        restrictionBot.sendMessage(msg.chat.id, `Message filtering mode: on.`);
+        filterMode = true;
+    }     
+
+    // turn message filtering off
+    if (msg.text === 'stop filtering mode' && whitelist.includes(msg.from.username) && filterMode) {
+        restrictionBot.sendMessage(msg.chat.id, `Message filtering mode: off.`); 
+        filterMode = false;
+    }
+
+    // add words to filter list
+    if (message.includes('!add') && whitelist.includes(msg.from.username)) {
+        let wordsToBlacklist = message.split(' ').slice(1, message.length).join(' ');
+        // push the blacklisted word into a array
+        filtered.push(wordsToBlacklist);
+        // show the chatroom the words that are blacklisted
+        restrictionBot.sendMessage(msg.chat.id, `"${wordsToBlacklist}" added.`);
+    } 
+
+    // remove words to filter list
+    if (message.includes('!remove') && whitelist.includes(msg.from.username)) {
+        // get the words to remove
+        let wordsToRemove = message.split(' ').slice(1, message.length).join(' ');
+        // find the index of the word in list
+        let indexToRemove = filtered.indexOf(wordsToRemove);
+        // remove it from array
+        filtered.splice(indexToRemove, 1);        
+        // show the remaining words in the filtered list
+        restrictionBot.sendMessage(msg.chat.id, `"${wordsToRemove}" removed.`);
+    }
+
+    // show current blacklisted words
+    if (message.includes('!showblacklist') && whitelist.includes(msg.from.username)) {
+        let wordlist = filtered.map((word, index) => {return `\t${index+1}.) "${word}"\n`}).join(' ')
+        restrictionBot.sendMessage(msg.chat.id, `Current list:\n\t${(wordlist) !== false ? wordlist:'None.'}`);
+    }
+    // if filter mode is on, check the message to see if it is in the filter list, if it is, delete the message
+    // to remove the message, you need the chat_id and the message_id
+    // it also remove non alphanumeric characters from test case
+    if ( (filtered.includes(message.toLowerCase()) || filtered.includes(message.toLowerCase().replace(/[^\w\s]/gi, ''))) && !whitelist.includes(msg.from.username)) {
+        restrictionBot.deleteMessage(msg.chat.id, msg.message_id);
+        restrictionBot.sendMessage(msg.chat.id, `(Message id: ${msg.message_id}, "${msg.text}") from ${msg.from.username} were deleted.`);
+    }
 });
 
 // random facts bot
@@ -88,6 +137,7 @@ randomFactsBot.on('message', msg => {
         //should generate random interval
         factsIntervalId = setInterval(() => {
             // get a randomFact and send the fact to chat
+            // change this to send message or picture in the future
             randomFactsBot.sendMessage(msg.chat.id, facts[Math.floor(Math.random()*facts.length)]);
         }, randomFactsTimer);
         randomFactsBot.sendMessage(msg.chat.id, `Turning random facts on.`); 
@@ -123,7 +173,8 @@ randomFactsBot.on('message', msg => {
                 clearInterval(factsIntervalId);
                 // restart the loop with the new timer
                 factsIntervalId = setInterval(() => {
-                    // get a randomFact and send the fact to chat
+                    // get a randomFact and send the fact to chat  
+                    // change this to send message or picture in the future
                     randomFactsBot.sendMessage(msg.chat.id, facts[Math.floor(Math.random()*facts.length)]);
                 }, randomFactsTimer); 
             }           
@@ -162,15 +213,28 @@ quizBot.on('message', msg => {
             if (queue.length > 0) {
                 // get the last element of queue
                 let index = queue.pop();
-                // send the question to chat
-                quizBot.sendMessage(msg.chat.id, `Question ${questionNumber}.\n${quiz[index]}`);
-                // add 1 to questionNumber
-                questionNumber++;
+                // get the question
+                let question = quiz[index];
+                // if question wasnt used
+                if (!usedQuestions.includes(question)) {
+                    // send the question to chat
+                    quizBot.sendMessage(msg.chat.id, `Question ${questionNumber}.\n${quiz[index]}`);
+                    // add 1 to questionNumber
+                    questionNumber++;
+                // all the questions were used, we should stop the interval
+                } else  {
+                    // clear interval to stop the loop
+                    clearInterval(quizIntervalId);
+                    quizMode = false;
+                    questionNumber = 1;
+                    quizBot.sendMessage(msg.chat.id, `I am out of questions. Please ask the owner to load more questions for me to ask!`);  
+                }
             // run out of question;                
             } else {
                 // clear interval to stop the loop
                 clearInterval(quizIntervalId);
                 quizMode = false;
+                questionNumber = 1;
                 quizBot.sendMessage(msg.chat.id, `I am out of questions. Please ask the owner to load more questions for me to ask!`);                
             }
         }, quizTimer);

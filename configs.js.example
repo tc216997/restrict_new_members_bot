@@ -7,6 +7,8 @@ let configs = {
   randomFactsTimer: 60,
   restrictionTimer: 10,
   restrictionMode: false,
+  filterMode: false,
+  filteredWords: ['word1','word2','phrase1','phrase2'],  
   quizMode: false,
   quizTimer: 60,
   facts: [
