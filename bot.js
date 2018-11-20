@@ -10,6 +10,7 @@ let randomFactsTimer = configs.randomFactsTimer * 1000 * 60;
 let restrictionTimer = configs.restrictionTimer;
 let restrictionMode = configs.restrictionMode;
 let filterMode = configs.filterMode;
+let filterGroups = configs.filterGroups;
 let randomFactsMode = configs.randomFactsMode;
 let quizMode = configs.quizMode;
 let quizTimer = configs.quizTimer * 1000 * 60;
@@ -27,8 +28,11 @@ let commands = ['!showCommands',
     '!stopFilter',
     '!showConfigs',
     '!addWords wordToAddToFilter',
+    '!addFGroup groupname',
+    '!removeFGroup groupname',
     '!removeWords wordToRemoveFromFilter',
     '!showFilter',
+    '!showFGroups',
     '!whitelist',
     '!addUser usernameToBeAdd',
     '!removeUser usernameToBeRemoved',
@@ -66,10 +70,10 @@ restrictionBot.on('new_chat_members', (msg) => {
 
 // restriction bot
 restrictionBot.on('message', msg => {
-    let message = [];
+    let message = '';
     let beginsWith = '';
     if (msg.hasOwnProperty('text')) {
-        message = msg.text
+        message = msg.text;
         beginsWith = message.split(' ')[0]
     }
 
@@ -118,7 +122,6 @@ restrictionBot.on('message', msg => {
     // show the configs
     if (message === '!showConfigs' && whitelist.includes(msg.from.username)) {
         restrictionBot.sendMessage(mainChatId, `\tRestriction Mode: ${restrictionMode}\t\nMessage filtering mode: ${filterMode}\t\nQuiz Mode: ${quizMode}\t\nRandom Facts Mode: ${randomFactsMode}`); 
-        filterMode = false;
     }
 
     // add words to filter list
@@ -130,6 +133,15 @@ restrictionBot.on('message', msg => {
         restrictionBot.sendMessage(mainChatId, `"${wordsToBlacklist}" added to the list.`);
     }
 
+    // add groups name to filter
+    if (beginsWith === '!addFGroup' && whitelist.includes(msg.from.username)) {
+        let groupName = message.split(' ').slice(1, message.length).join(' ').toLowerCase();
+        // push the group names into an array
+        filterGroups.push(groupName);
+        // show the chatroom the groups that are being filtered
+        restrictionBot.sendMessage(mainChatId, `"${groupName}" added to the groups to be filtered.`);
+    }
+    
     // remove words to filter list
     if (beginsWith === '!removeWords' && whitelist.includes(msg.from.username)) {
         // get the words to remove
@@ -146,19 +158,41 @@ restrictionBot.on('message', msg => {
         }
     }
 
+    // remove words to filter list
+    if (beginsWith === '!removeFGroup' && whitelist.includes(msg.from.username)) {
+        // get the words to remove
+        let groupName = message.split(' ').slice(1, message.length).join(' ');
+        // find the index of the word in list
+        let indexToRemove = filtered.indexOf(groupName);
+        if (indexToRemove > -1) {
+            // remove it from array
+            filterGroups.splice(indexToRemove, 1);        
+            // show the chatroom the groups that are being filtered
+            restrictionBot.sendMessage(mainChatId, `"${groupName}" removed from the groups to be filtered.`);
+        } else {
+            restrictionBot.sendMessage(mainChatId, `"${groupName}" isn't in the list.`);
+        }
+    }
+
     // show current blacklisted words
     if (message === '!showFilter' && whitelist.includes(msg.from.username)) {
         let wordlist = filtered.map((word, index) => {return `\t${index+1}.) "${word}"\n`}).join(' ')
         restrictionBot.sendMessage(mainChatId, `Current list:\n\t${(wordlist) !== false ? wordlist:'None.'}`);
     }
 
+    // show current blacklisted words
+    if (message === '!showFGroups' && whitelist.includes(msg.from.username)) {
+        let wordlist = filterGroups.map((word, index) => {return `\t${index+1}.) "${word}"\n`}).join(' ')
+        restrictionBot.sendMessage(mainChatId, `Current filtered groups:\n\t${(wordlist) !== false ? wordlist:'None.'}`);
+    }
 
     // if filter mode is on, check the message to see if it is in the filter list, if it is, delete the message
     // to remove the message, you need the chat_id and the message_id
     // it also remove non alphanumeric characters from test case
-    if ( (filtered.includes(message.toLowerCase()) || filtered.includes(message.toLowerCase().replace(/[^\w\s]/gi, ''))) && !whitelist.includes(msg.from.username) && filterMode) {
+    // checks the groups name 
+    if (filterGroups.includes(msg.chat.title.toLowerCase()) && (filtered.includes(message.toLowerCase()) || filtered.includes(message.toLowerCase().replace(/[^\w\s]/gi, ''))) && !whitelist.includes(msg.from.username) && filterMode) {
         restrictionBot.deleteMessage(msg.chat.id, msg.message_id);
-        restrictionBot.sendMessage(mainChatId, `(Message id: ${msg.message_id}, "${msg.text}") from ${msg.from.username} were deleted.`);
+        restrictionBot.sendMessage(mainChatId, `(chat.id: ${msg.chat.id} Chat group: ${msg.chat.title} Message id: ${msg.message_id}, "${msg.text}") from ${msg.from.username} were deleted.`);
     }
 
     // show whitelisted usernames
@@ -166,7 +200,6 @@ restrictionBot.on('message', msg => {
         let wordlist = whitelist.map((word, index) => {return `\t${index+1}.) "${word}"\n`}).join(' ')
         restrictionBot.sendMessage(mainChatId, `Whitelisted usernames:\n\t${(wordlist) !== false ? wordlist:'None.'}`);
     }
-
     // add whitelisted usernames
     if (beginsWith === '!addUser' && whitelist.includes(msg.from.username)) {
         let whitelistName = message.split(' ').slice(1, message.length).join(' ');
@@ -195,7 +228,7 @@ restrictionBot.on('message', msg => {
 
 // random facts bot
 randomFactsBot.on('message', msg => {
-    let message = [];
+    let message = '';
 
     if (msg.hasOwnProperty('text')) {
         message = msg.text
@@ -261,7 +294,7 @@ randomFactsBot.on('message', msg => {
 
 // quiz bot
 quizBot.on('message', msg => {
-    let message = [];
+    let message = '';
 
     if (msg.hasOwnProperty('text')) {
         message = msg.text
