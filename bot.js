@@ -9,13 +9,22 @@ let filtered = configs.filteredWords;
 let randomFactsTimer = configs.randomFactsTimer * 1000 * 60;
 let restrictionTimer = configs.restrictionTimer;
 let restrictionMode = configs.restrictionMode;
+let welcomeMode = configs.welcomeMode;
 let filterMode = configs.filterMode;
-let filterGroups = configs.filterGroups;
 let randomFactsMode = configs.randomFactsMode;
 let quizMode = configs.quizMode;
 let quizTimer = configs.quizTimer * 1000 * 60;
 let questionNumber = 1;
 let usedQuestions = [];
+let muteMembers = [];
+let newMembersQueue = [];
+let groupId = '';
+let mute = false;
+let welcomeTimerId = null;
+let welcomeGroupId = null;
+let welcomeSent = null;
+let welcomeMessageId = null;
+let additionalWelcomeText = configs.additionalWelcomeText;
 let whitelist = configs.whitelist;
 let factsIntervalId, quizIntervalId;
 let mainChatId = -1001323429701;
@@ -26,13 +35,12 @@ let commands = ['!showCommands',
     '!setRestrictionTimer minutes',
     '!startFilter', 
     '!stopFilter',
+    '!mute',
+    '!unmute',
     '!showConfigs',
     '!addWords wordToAddToFilter',
-    '!addFGroup groupname',
-    '!removeFGroup groupname',
     '!removeWords wordToRemoveFromFilter',
     '!showFilter',
-    '!showFGroups',
     '!whitelist',
     '!addUser usernameToBeAdd',
     '!removeUser usernameToBeRemoved',
@@ -43,7 +51,9 @@ let commands = ['!showCommands',
     '!startQuiz',
     '!stopQuiz',
     '!quizTimer',
-    '!setQuizTimer minutes' ]
+    '!setQuizTimer minutes',
+    '!welcomeOn',
+    '!welcomeOff' ]
 
 // on new members event
 restrictionBot.on('new_chat_members', (msg) => {
@@ -51,11 +61,10 @@ restrictionBot.on('new_chat_members', (msg) => {
 
     // get the new member joined timestamp
     let timestamp = msg.date;
-
     // add 10 minutes to restriction time
     let restrictionTime = timestamp + restrictionTimer*60;
-
     // loop through new members object
+    let names = '';
     msg.new_chat_members.forEach((member) => {
         
         // only restrict new members if the mode is on
@@ -63,9 +72,16 @@ restrictionBot.on('new_chat_members', (msg) => {
             // call restrictChatMember() and pass the parameters
             restrictionBot.restrictChatMember(msg.chat.id, member.id, {until_date: restrictionTime});
         }
-
+        // only push names into queue if welcome mode is on
+        if (welcomeMode) {
+           if ('username' in member) {
+             newMembersQueue.push(`@${member.username}`);
+           } else {
+             newMembersQueue.push(`@${member.first_name}`);
+           }
+        }
     });
-    
+
 });
 
 // restriction bot
@@ -75,6 +91,127 @@ restrictionBot.on('message', msg => {
     if (msg.hasOwnProperty('text')) {
         message = msg.text;
         beginsWith = message.split(' ')[0]
+    }
+
+    if (message === '!welcomeOn' && whitelist.includes(msg.from.username) && welcomeMode === false) {
+        // get the group of members thats not in the whitelist
+        welcomeGroupId = msg.chat.id;
+        welcomeMode = true;
+        restrictionBot.sendMessage(welcomeGroupId, `Welcome message on!`); 
+        //start interval to check queue, if queue isnt empty, send welcome message
+        welcomeTimerId = setInterval(() => {
+            if (newMembersQueue.length !== 0) {
+                let welcomeMembers = '';
+                let endOfQueue = newMembersQueue.length-1;
+                for (let i = 0; i < newMembersQueue.length; i++) {
+                    if (endOfQueue === i) {
+                        welcomeMembers += `${newMembersQueue[i]}.`
+                    } else {
+                        welcomeMembers += `${newMembersQueue[i]}, `
+                    }
+                }
+                // if welcome was sent already, edit the welcome message
+                if (welcomeSent) {
+                    restrictionBot.editMessageText(`Welcome ${welcomeMembers}\n${additionalWelcomeText}`, {chat_id: welcomeGroupId, message_id: welcomeMessageId});
+                } else {
+                    // send the welcome message, store the message id
+                    restrictionBot.sendMessage(welcomeGroupId, `Welcome ${welcomeMembers}\n${additionalWelcomeText}`).then( (botMessage) => {
+                        welcomeMessageId = botMessage.message_id;
+                    });
+                    welcomeSent = true;
+                }
+                // clear queue
+                newMembersQueue = [];
+            }
+        }, 3000);
+    }
+
+    if (message === '!welcomeOff' && whitelist.includes(msg.from.username)) {
+        // get the group of members thats not in the whitelist
+        // call restrictChatMember() and pass the parameters
+        //restrictionBot.restrictChatMember(msg.chat.id, member.id, {until_date: restrictionTime});
+        welcomeGroupId = msg.chat.id;
+        welcomeMode = false;
+        restrictionBot.sendMessage(welcomeGroupId, `Welcome message off!`); 
+        clearInterval(welcomeTimerId)
+    }
+
+    // add words to filter list
+    if (beginsWith === '!addWelcome' && whitelist.includes(msg.from.username)) {
+        additionalWelcomeText = message.split(' ').slice(1, message.length).join(' ');
+        restrictionBot.sendMessage(mainChatId, `"${additionalWelcomeText}" added on to the welcome message.`); 
+    }
+
+    // mute mode on except for whitelisted member
+    // save the group of muted members
+    // on mute, delete the message, save the userid, restrict the user, save the id to array
+    if (message === '!mute' && whitelist.includes(msg.from.username)) {
+        // get the group of members thats not in the whitelist
+        // call restrictChatMember() and pass the parameters
+        //restrictionBot.restrictChatMember(msg.chat.id, member.id, {until_date: restrictionTime});
+        groupId = msg.chat.id;
+        mute = true;
+        restrictionBot.sendMessage(welcomeGroupId, `Group mute on!`); 
+    }
+
+    // unmute the group by going through the list
+    if (message === '!unmute' && whitelist.includes(msg.from.username)) {
+        // get the group of members thats not in the whitelist
+        // call restrictChatMember() and pass the parameters
+        //restrictionBot.restrictChatMember(msg.chat.id, member.id, {until_date: restrictionTime});
+        mute = false;
+        groupId = msg.chat.id;
+        muteMembers.map(member => {
+            // unrestrict that member
+            restrictionBot.restrictChatMember(groupId, member, 
+                {
+                    can_send_messages: true,
+                    can_send_media_messages: true,
+                    can_send_other_messages: true,
+                    can_add_web_page_previews: true,
+                }
+            );
+        });
+        muteMembers = [];
+        restrictionBot.sendMessage(welcomeGroupId, `Group mute off!`); 
+    }
+
+    // if mute mode is on and user not in whitelist
+    if (mute && !whitelist.includes(msg.from.username)) {
+        //get the id of the person who talked
+        let memberId = msg.from.id;
+        let messageId = msg.message_id;
+        // get the timestamp
+        let timestamp = msg.date;
+        // add 360 minutes to restriction time
+        let restrictionTime = timestamp + 1*60;             
+        // push the id to the list if its not the list
+        if (!muteMembers.includes(memberId)) {
+            muteMembers.push(memberId);     
+            // restrict that member
+            restrictionBot.restrictChatMember(groupId, memberId, 
+                {
+                    until_date: restrictionTime,
+                    can_send_messages: false,
+                    can_send_media_messages: false,
+                    can_send_other_messages: false,
+                    can_add_web_page_previews: false,
+                }
+            );            
+        } else {       
+            // restrict that member
+            restrictionBot.restrictChatMember(groupId, memberId, 
+                {
+                    until_date: restrictionTime,
+                    can_send_messages: false,
+                    can_send_media_messages: false,
+                    can_send_other_messages: false,
+                    can_add_web_page_previews: false,
+                }
+            );            
+        }
+        // delete the message
+        restrictionBot.deleteMessage(groupId, messageId);
     }
 
     // show current list of commands
@@ -133,15 +270,6 @@ restrictionBot.on('message', msg => {
         restrictionBot.sendMessage(mainChatId, `"${wordsToBlacklist}" added to the list.`);
     }
 
-    // add groups name to filter
-    if (beginsWith === '!addFGroup' && whitelist.includes(msg.from.username)) {
-        let groupName = message.split(' ').slice(1, message.length).join(' ').toLowerCase();
-        // push the group names into an array
-        filterGroups.push(groupName);
-        // show the chatroom the groups that are being filtered
-        restrictionBot.sendMessage(mainChatId, `"${groupName}" added to the groups to be filtered.`);
-    }
-    
     // remove words to filter list
     if (beginsWith === '!removeWords' && whitelist.includes(msg.from.username)) {
         // get the words to remove
@@ -158,39 +286,17 @@ restrictionBot.on('message', msg => {
         }
     }
 
-    // remove words to filter list
-    if (beginsWith === '!removeFGroup' && whitelist.includes(msg.from.username)) {
-        // get the words to remove
-        let groupName = message.split(' ').slice(1, message.length).join(' ');
-        // find the index of the word in list
-        let indexToRemove = filtered.indexOf(groupName);
-        if (indexToRemove > -1) {
-            // remove it from array
-            filterGroups.splice(indexToRemove, 1);        
-            // show the chatroom the groups that are being filtered
-            restrictionBot.sendMessage(mainChatId, `"${groupName}" removed from the groups to be filtered.`);
-        } else {
-            restrictionBot.sendMessage(mainChatId, `"${groupName}" isn't in the list.`);
-        }
-    }
-
     // show current blacklisted words
     if (message === '!showFilter' && whitelist.includes(msg.from.username)) {
         let wordlist = filtered.map((word, index) => {return `\t${index+1}.) "${word}"\n`}).join(' ')
         restrictionBot.sendMessage(mainChatId, `Current list:\n\t${(wordlist) !== false ? wordlist:'None.'}`);
     }
 
-    // show current blacklisted words
-    if (message === '!showFGroups' && whitelist.includes(msg.from.username)) {
-        let wordlist = filterGroups.map((word, index) => {return `\t${index+1}.) "${word}"\n`}).join(' ')
-        restrictionBot.sendMessage(mainChatId, `Current filtered groups:\n\t${(wordlist) !== false ? wordlist:'None.'}`);
-    }
-
     // if filter mode is on, check the message to see if it is in the filter list, if it is, delete the message
     // to remove the message, you need the chat_id and the message_id
     // it also remove non alphanumeric characters from test case
     // checks the groups name 
-    if (filterGroups.includes(msg.chat.title.toLowerCase()) && (filtered.includes(message.toLowerCase()) || filtered.includes(message.toLowerCase().replace(/[^\w\s]/gi, ''))) && !whitelist.includes(msg.from.username) && filterMode) {
+    if (filterMode && (filtered.includes(message.toLowerCase()) || filtered.includes(message.toLowerCase().replace(/[^\w\s]/gi, ''))) && !whitelist.includes(msg.from.username)) {
         restrictionBot.deleteMessage(msg.chat.id, msg.message_id);
         restrictionBot.sendMessage(mainChatId, `(chat.id: ${msg.chat.id} Chat group: ${msg.chat.title} Message id: ${msg.message_id}, "${msg.text}") from ${msg.from.username} were deleted.`);
     }
