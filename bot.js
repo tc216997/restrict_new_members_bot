@@ -24,6 +24,7 @@ let welcomeTimerId = null;
 let welcomeGroupId = null;
 let welcomeSent = null;
 let welcomeMessageId = null;
+let welcomeTimer = configs.welcomeTimer;
 let additionalWelcomeText = configs.additionalWelcomeText;
 let whitelist = configs.whitelist;
 let factsIntervalId, quizIntervalId;
@@ -53,7 +54,8 @@ let commands = ['!showCommands',
     '!quizTimer',
     '!setQuizTimer minutes',
     '!welcomeOn',
-    '!welcomeOff' ]
+    '!welcomeOff',
+    '!setWelcomeTimer secondsForEachQueue' ]
 
 // on new members event
 restrictionBot.on('new_chat_members', (msg) => {
@@ -123,7 +125,7 @@ restrictionBot.on('message', msg => {
                 // clear queue
                 newMembersQueue = [];
             }
-        }, 3000);
+        }, welcomeTimer);
     }
 
     if (message === '!welcomeOff' && whitelist.includes(msg.from.username)) {
@@ -142,6 +144,15 @@ restrictionBot.on('message', msg => {
         restrictionBot.sendMessage(mainChatId, `"${additionalWelcomeText}" added on to the welcome message.`); 
     }
 
+    // change welcome loop timer
+    if (beginsWith === '!setWelcomeTimer' && whitelist.includes(msg.from.username) && !welcomeMode) {
+        // get only number from string
+        newTime = Math.round(parseFloat(message.split(' ').pop()));
+        if (newTime) {
+            welcomeTimer = newTime
+            restrictionBot.sendMessage(mainChatId, `Welcome timer is now ${welcomeTimer} second.`);    
+        }
+    } 
     // mute mode on except for whitelisted member
     // save the group of muted members
     // on mute, delete the message, save the userid, restrict the user, save the id to array
