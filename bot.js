@@ -36,8 +36,8 @@ let commands = ['!showCommands',
     '!setRestrictionTimer minutes',
     '!startFilter', 
     '!stopFilter',
-    '!mute',
-    '!unmute',
+    '!mute *call mute in the group thats being muted* ',
+    '!unmute *call unmute in the group thats being muted*',
     '!showConfigs',
     '!addWords wordToAddToFilter',
     '!removeWords wordToRemoveFromFilter',
@@ -53,8 +53,9 @@ let commands = ['!showCommands',
     '!stopQuiz',
     '!quizTimer',
     '!setQuizTimer minutes',
-    '!welcomeOn',
-    '!welcomeOff',
+    '!welcomeOn *Command has to be called in group thats being welcomed*',
+    '!welcomeOff *Command has to be called in group thats being welcomed*',
+    '!addWelcome welcome message to be added',
     '!setWelcomeTimer secondsForEachQueue' ]
 
 // on new members event
@@ -99,7 +100,7 @@ restrictionBot.on('message', msg => {
         // get the group of members thats not in the whitelist
         welcomeGroupId = msg.chat.id;
         welcomeMode = true;
-        restrictionBot.sendMessage(welcomeGroupId, `Welcome message on!`); 
+        restrictionBot.sendMessage(mainChatId, `Welcome message on!`); 
         //start interval to check queue, if queue isnt empty, send welcome message
         welcomeTimerId = setInterval(() => {
             if (newMembersQueue.length !== 0) {
@@ -130,11 +131,9 @@ restrictionBot.on('message', msg => {
 
     if (message === '!welcomeOff' && whitelist.includes(msg.from.username)) {
         // get the group of members thats not in the whitelist
-        // call restrictChatMember() and pass the parameters
-        //restrictionBot.restrictChatMember(msg.chat.id, member.id, {until_date: restrictionTime});
         welcomeGroupId = msg.chat.id;
         welcomeMode = false;
-        restrictionBot.sendMessage(welcomeGroupId, `Welcome message off!`); 
+        restrictionBot.sendMessage(mainChatId, `Welcome message off!`); 
         clearInterval(welcomeTimerId)
     }
 
